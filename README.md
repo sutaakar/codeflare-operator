@@ -8,10 +8,10 @@ CodeFlare Stack Compatibility Matrix
 
 | Component                    | Version |
 |------------------------------|---------|
-| CodeFlare Operator           | v0.0.6  |
-| Multi-Cluster App Dispatcher | v1.32.0 |
-| CodeFlare-SDK                | v0.5.0  |
-| InstaScale                   | v0.0.5  |
+| CodeFlare Operator           | v0.0.0-dev  |
+| Multi-Cluster App Dispatcher | v0.0.0-dev |
+| CodeFlare-SDK                | v0.0.0-dev  |
+| InstaScale                   | v0.0.0-dev  |
 | KubeRay                      | v0.5.0  |
 <!-- Compatibility Matrix end -->
 
