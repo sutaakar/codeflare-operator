@@ -35,6 +35,8 @@ func TestMNISTPyTorchMCAD(t *testing.T) {
 	test := With(t)
 	test.T().Parallel()
 
+
+
 	// Create a namespace
 	namespace := test.NewTestNamespace()
 
