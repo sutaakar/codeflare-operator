@@ -15,9 +15,9 @@ BUNDLE_VERSION ?= $(VERSION:v%=%)
 INSTASCALE_VERSION ?= v0.0.6
 
 # MCAD_VERSION defines the default version of the MCAD controller
-MCAD_VERSION ?= v1.33.0
+MCAD_VERSION ?= 08301744bc222b16ebb61f72926d3b3ac4787138
 # MCAD_REF, MCAD_REPO and MCAD_CRD define the reference to MCAD CRD resources
-MCAD_REF ?= release-${MCAD_VERSION}
+MCAD_REF ?= dev
 MCAD_REPO ?= github.com/project-codeflare/multi-cluster-app-dispatcher
 # Upstream MCAD is currently only creating release tags of the form `vX.Y.Z` (i.e the version)
 # The image is still published using the MCAD_REF format (i.e release-vX.Y.Z)
