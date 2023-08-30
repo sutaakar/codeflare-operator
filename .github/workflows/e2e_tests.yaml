@@ -70,6 +70,7 @@ jobs:
       - name: Deploy CodeFlare stack
         id: deploy
         run: |
+          kubectl describe nodes
           echo Deploying CodeFlare operator
           IMG="${REGISTRY_ADDRESS}"/codeflare-operator
           make image-push -e IMG="${IMG}"
@@ -89,25 +90,27 @@ jobs:
           echo "CODEFLARE_TEST_OUTPUT_DIR=${CODEFLARE_TEST_OUTPUT_DIR}" >> $GITHUB_ENV
 
           set -euo pipefail
+          kubectl describe nodes
           go test -timeout 30m -v ./test/e2e -json 2>&1 | tee ${CODEFLARE_TEST_OUTPUT_DIR}/gotest.log | gotestfmt
 
       - name: Print CodeFlare operator logs
         if: always() && steps.deploy.outcome == 'success'
         run: |
+          kubectl describe nodes
           echo "Printing CodeFlare operator logs"
-          kubectl logs -n openshift-operators --tail -1 -l app.kubernetes.io/name=codeflare-operator | tee ${CODEFLARE_TEST_OUTPUT_DIR}/codeflare-operator.log
+          kubectl logs -n openshift-operators -l app.kubernetes.io/name=codeflare-operator
 
       - name: Print MCAD controller logs
         if: always() && steps.deploy.outcome == 'success'
         run: |
           echo "Printing MCAD controller logs"
-          kubectl logs -n codeflare-system --tail -1 -l component=multi-cluster-application-dispatcher | tee ${CODEFLARE_TEST_OUTPUT_DIR}/mcad.log
+          kubectl logs -n codeflare-system -l component=multi-cluster-application-dispatcher
 
       - name: Print KubeRay operator logs
         if: always() && steps.deploy.outcome == 'success'
         run: |
           echo "Printing KubeRay operator logs"
-          kubectl logs -n ray-system --tail -1 -l app.kubernetes.io/name=kuberay | tee ${CODEFLARE_TEST_OUTPUT_DIR}/kuberay.log
+          kubectl logs -n ray-system -l app.kubernetes.io/name=kuberay
 
       - name: Upload logs
         uses: actions/upload-artifact@v3
