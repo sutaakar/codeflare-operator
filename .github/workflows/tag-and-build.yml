@@ -31,15 +31,15 @@ on:
       quay-organization:
         description: 'Quay organization used to push the built images to'
         required: true
-        default: 'project-codeflare'
+        default: 'ksuta'
       community-operators-prod-fork-organization:
         description: 'Owner of forked community-operators-prod repository used to push bundle files to'
         required: true
-        default: 'project-codeflare'
+        default: 'sutaakar'
       community-operators-prod-organization:
         description: 'Owner of target community-operators-prod repository used to open a PR against'
         required: true
-        default: 'redhat-openshift-ecosystem'
+        default: 'sutaakar'
 
 jobs:
   push:
