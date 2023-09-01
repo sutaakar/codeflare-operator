@@ -111,27 +111,6 @@ jobs:
       run: |
         make build
         make image-build -e IMG=quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:${{ github.event.inputs.version }}
-        make image-push -e IMG=quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:${{ github.event.inputs.version }}
-
-    - name: Image Push as stable tag
-      if: ${{ inputs.is-stable }}
-      run: |
-        podman tag quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:${{ github.event.inputs.version }} quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:stable
-        make image-push -e IMG=quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:stable
-
-    - name: Build bundle and create PR in OpenShift community operators repository
-      run: |
-        git config --global user.email "138894154+codeflare-machine-account@users.noreply.github.com"
-        git config --global user.name "codeflare-machine-account"
-        make openshift-community-operator-release
-      env:
-        VERSION: ${{ github.event.inputs.version }}
-        PREVIOUS_VERSION: ${{ github.event.inputs.replaces }}
-        INSTASCALE_VERSION: ${{ github.event.inputs.instascale-version }}
-        MCAD_VERSION: ${{ github.event.inputs.mcad-version }}
-        GH_TOKEN: ${{ secrets.CODEFLARE_MACHINE_ACCOUNT_TOKEN }}
-        OPERATORS_REPO_FORK_ORG: ${{ github.event.inputs.community-operators-prod-fork-organization }}
-        OPERATORS_REPO_ORG: ${{ github.event.inputs.community-operators-prod-organization }}
 
     - name: Cleanup the go.mod and go.sum
       run: |
