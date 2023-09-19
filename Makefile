@@ -12,7 +12,7 @@ VERSION ?= v0.0.0-dev
 BUNDLE_VERSION ?= $(VERSION:v%=%)
 
 # INSTASCALE_VERSION defines the default version of the InstaScale controller
-INSTASCALE_VERSION ?= v0.0.8
+INSTASCALE_VERSION ?= v0.0.6
 
 # MCAD_VERSION defines the default version of the MCAD controller
 MCAD_VERSION ?= v1.34.1
@@ -30,7 +30,7 @@ KUBERAY_VERSION ?= v0.5.0
 RAY_VERSION ?= 2.5.0
 
 # CODEFLARE_SDK_VERSION defines the default version of the CodeFlare SDK
-CODEFLARE_SDK_VERSION ?= 0.7.1
+CODEFLARE_SDK_VERSION ?= 0.0.6
 
 # OPERATORS_REPO_ORG points to GitHub repository organization where bundle PR is opened against
 # OPERATORS_REPO_FORK_ORG points to GitHub repository fork organization where bundle build is pushed to

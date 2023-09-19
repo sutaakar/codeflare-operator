@@ -12,7 +12,7 @@ require (
 	github.com/openshift/api v0.0.0-20230213134911-7ba313770556
 	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/project-codeflare/multi-cluster-app-dispatcher v1.34.1
-	github.com/ray-project/kuberay/ray-operator v0.0.0-20230908233208-a8f730e5a2b6
+	github.com/ray-project/kuberay/ray-operator v0.0.0-20230916205808-6d5020fba579
 	go.uber.org/zap v1.24.0
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.26.3

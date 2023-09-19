@@ -5,7 +5,7 @@ package support
 // ***********************
 
 const (
-	CodeFlareSDKVersion = "0.7.1"
+	CodeFlareSDKVersion = "0.0.6"
 	RayVersion          = "2.5.0"
 	RayImage            = "rayproject/ray:2.5.0"
 )
