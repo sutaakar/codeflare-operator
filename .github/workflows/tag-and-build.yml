@@ -7,23 +7,23 @@ on:
       version:
         description: 'Tag to be used for operator image'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v1.0.0-rc.2'
       replaces:
         description: 'The previous semantic version that this tag replaces.'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v1.0.0-rc.1'
       mcad-version:
         description: 'Published version of multi-cluster-app-dispatcher'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v1.34.0'
       codeflare-sdk-version:
         description: 'Published version of CodeFlare-SDK'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v0.7.0'
       instascale-version:
         description: 'Published version of InstaScale'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v0.0.8'
       is-stable:
         description: 'Select if the built image should be tagged as stable'
         required: true
@@ -31,15 +31,15 @@ on:
       quay-organization:
         description: 'Quay organization used to push the built images to'
         required: true
-        default: 'project-codeflare'
+        default: 'ksuta'
       community-operators-prod-fork-organization:
         description: 'Owner of forked community-operators-prod repository used to push bundle files to'
         required: true
-        default: 'project-codeflare'
+        default: 'sutaakar'
       community-operators-prod-organization:
         description: 'Owner of target community-operators-prod repository used to open a PR against'
         required: true
-        default: 'redhat-openshift-ecosystem'
+        default: 'sutaakar'
 
 jobs:
   push:
