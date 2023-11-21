@@ -12,17 +12,17 @@ VERSION ?= v0.0.0-dev
 BUNDLE_VERSION ?= $(VERSION:v%=%)
 
 # INSTASCALE_VERSION defines the default version of the InstaScale controller
-INSTASCALE_VERSION ?= v0.3.1
+INSTASCALE_VERSION ?= v0.0.4
 INSTASCALE_REPO ?= github.com/project-codeflare/instascale
 
 # MCAD_VERSION defines the default version of the MCAD controller
-MCAD_VERSION ?= v1.38.1
+MCAD_VERSION ?= v1.38.0
 MCAD_REPO ?= github.com/project-codeflare/multi-cluster-app-dispatcher
 # Upstream MCAD is currently only creating release tags of the form `vX.Y.Z` (i.e the version)
 MCAD_CRD ?= ${MCAD_REPO}/config/crd?ref=${MCAD_VERSION}
 
 # KUBERAY_VERSION defines the default version of the KubeRay operator (used for testing)
-KUBERAY_VERSION ?= v1.0.0-rc.1
+KUBERAY_VERSION ?= v0.0.6
 
 # RAY_VERSION defines the default version of Ray (used for testing)
 RAY_VERSION ?= 2.5.0
