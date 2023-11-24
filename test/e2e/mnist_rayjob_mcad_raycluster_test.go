@@ -247,6 +247,7 @@ func TestMNISTRayJobMCADRayCluster(t *testing.T) {
 			ShutdownAfterJobFinishes: false,
 		},
 	}
+
 	rayJob, err = test.Client().Ray().RayV1().RayJobs(namespace.Name).Create(test.Ctx(), rayJob, metav1.CreateOptions{})
 	test.Expect(err).NotTo(HaveOccurred())
 	test.T().Logf("Created RayJob %s/%s successfully", rayJob.Namespace, rayJob.Name)
