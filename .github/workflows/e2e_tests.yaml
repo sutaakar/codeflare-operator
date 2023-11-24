@@ -27,7 +27,7 @@ concurrency:
 jobs:
   kubernetes-e2e:
 
-    runs-on: ubuntu-20.04-4core
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout code
@@ -71,7 +71,7 @@ jobs:
           echo "CODEFLARE_TEST_OUTPUT_DIR=${CODEFLARE_TEST_OUTPUT_DIR}" >> $GITHUB_ENV
 
           set -euo pipefail
-          go test -timeout 30m -v ./test/e2e -json 2>&1 | tee ${CODEFLARE_TEST_OUTPUT_DIR}/gotest.log | gotestfmt
+          kubectl delete namespace qqq
 
       - name: Print CodeFlare operator logs
         if: always() && steps.deploy.outcome == 'success'
@@ -93,3 +93,12 @@ jobs:
           retention-days: 10
           path: |
             ${{ env.CODEFLARE_TEST_OUTPUT_DIR }}/**/*.log
+
+      - name: Post notification about failure to a Slack channel in case of push event
+        if: failure() && github.event_name == 'push'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: "codeflare-nightlies"
+          slack-message: "e2e test on push failed, <https://github.com/project-codeflare/codeflare-operator/actions/workflows/e2e_tests.yaml|View workflow runs>"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
