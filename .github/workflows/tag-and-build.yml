@@ -7,27 +7,27 @@ on:
       version:
         description: 'Tag to be used for operator image'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v1.0.2'
       replaces:
         description: 'The previous semantic version that this tag replaces.'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v1.0.1'
       mcad-version:
         description: 'Published version of multi-cluster-app-dispatcher'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v1.38.0'
       codeflare-sdk-version:
         description: 'Published version of CodeFlare-SDK'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v0.12.0'
       instascale-version:
         description: 'Published version of InstaScale'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v0.3.0'
       kuberay-version:
         description: 'Tested version of KubeRay'
         required: true
-        default: 'v0.0.0-dev'
+        default: 'v1.0.0-rc.1'
       is-stable:
         description: 'Select if the built image should be tagged as stable'
         required: true
@@ -35,15 +35,15 @@ on:
       quay-organization:
         description: 'Quay organization used to push the built images to'
         required: true
-        default: 'project-codeflare'
+        default: 'ksuta'
       community-operators-prod-fork-organization:
         description: 'Owner of forked community-operators-prod repository used to push bundle files to'
         required: true
-        default: 'project-codeflare'
+        default: 'sutaakar'
       community-operators-prod-organization:
         description: 'Owner of target community-operators-prod repository used to open a PR against'
         required: true
-        default: 'redhat-openshift-ecosystem'
+        default: 'sutaakar'
 
 jobs:
   push:
@@ -121,20 +121,6 @@ jobs:
         podman tag quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:${{ github.event.inputs.version }} quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:stable
         make image-push -e IMG=quay.io/${{ github.event.inputs.quay-organization }}/codeflare-operator:stable
 
-    - name: Build bundle and create PR in OpenShift community operators repository
-      run: |
-        git config --global user.email "138894154+codeflare-machine-account@users.noreply.github.com"
-        git config --global user.name "codeflare-machine-account"
-        make openshift-community-operator-release
-      env:
-        VERSION: ${{ github.event.inputs.version }}
-        PREVIOUS_VERSION: ${{ github.event.inputs.replaces }}
-        INSTASCALE_VERSION: ${{ github.event.inputs.instascale-version }}
-        MCAD_VERSION: ${{ github.event.inputs.mcad-version }}
-        GH_TOKEN: ${{ secrets.CODEFLARE_MACHINE_ACCOUNT_TOKEN }}
-        OPERATORS_REPO_FORK_ORG: ${{ github.event.inputs.community-operators-prod-fork-organization }}
-        OPERATORS_REPO_ORG: ${{ github.event.inputs.community-operators-prod-organization }}
-
     - name: Cleanup the go.mod and go.sum
       run: |
         go mod tidy
@@ -180,3 +166,17 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.CODEFLARE_MACHINE_ACCOUNT_TOKEN }}
       shell: bash
+
+    - name: Build bundle and create PR in OpenShift community operators repository
+      run: |
+        git config --global user.email "138894154+codeflare-machine-account@users.noreply.github.com"
+        git config --global user.name "codeflare-machine-account"
+        make openshift-community-operator-release
+      env:
+        VERSION: ${{ github.event.inputs.version }}
+        PREVIOUS_VERSION: ${{ github.event.inputs.replaces }}
+        INSTASCALE_VERSION: ${{ github.event.inputs.instascale-version }}
+        MCAD_VERSION: ${{ github.event.inputs.mcad-version }}
+        GH_TOKEN: ${{ secrets.CODEFLARE_MACHINE_ACCOUNT_TOKEN }}
+        OPERATORS_REPO_FORK_ORG: ${{ github.event.inputs.community-operators-prod-fork-organization }}
+        OPERATORS_REPO_ORG: ${{ github.event.inputs.community-operators-prod-organization }}
