@@ -47,6 +47,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	routev1 "github.com/openshift/api/route/v1"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/project-codeflare/codeflare-operator/pkg/config"
 	"github.com/project-codeflare/codeflare-operator/pkg/controllers"
@@ -133,8 +134,10 @@ func main() {
 	setupLog.V(2).Info("REST client", "qps", kubeConfig.QPS, "burst", kubeConfig.Burst)
 
 	mgr, err := ctrl.NewManager(kubeConfig, ctrl.Options{
-		Scheme:                     scheme,
-		MetricsBindAddress:         cfg.Metrics.BindAddress,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: cfg.Metrics.BindAddress,
+		},
 		HealthProbeBindAddress:     cfg.Health.BindAddress,
 		LeaderElection:             pointer.BoolDeref(cfg.LeaderElection.LeaderElect, false),
 		LeaderElectionID:           cfg.LeaderElection.ResourceName,

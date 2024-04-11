@@ -23,9 +23,11 @@ import (
 	gomega "github.com/onsi/gomega"
 	. "github.com/project-codeflare/codeflare-common/support"
 	rayv1 "github.com/ray-project/kuberay/ray-operator/apis/ray/v1"
+	"sigs.k8s.io/kueue/apis/kueue/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -44,10 +46,10 @@ func TestMCADRay(t *testing.T) {
 		"requirements.txt":               readRequirementsTxt(test),
 	})
 
-	// Create RBAC, retrieve token for user with limited rights
-	policyRules := []rbacv1.PolicyRule{
+	// Create required RBAC for users
+	adminPolicyRules := []rbacv1.PolicyRule{
 		{
-			Verbs:     []string{"get", "list"},
+			Verbs:     []string{"get", "create", "delete", "list", "patch", "update"},
 			APIGroups: []string{rayv1.GroupVersion.Group},
 			Resources: []string{"rayclusters", "rayclusters/status"},
 		},
@@ -62,34 +64,84 @@ func TestMCADRay(t *testing.T) {
 			Resources: []string{"ingresses"},
 		},
 	}
-
-	// Create cluster wide RBAC, required for SDK OpenShift check
-	// TODO reevaluate once SDK change OpenShift detection logic
-	clusterPolicyRules := []rbacv1.PolicyRule{
+	// Needed by oauth
+	userPolicyRules := []rbacv1.PolicyRule{
 		{
-			Verbs:         []string{"get", "list"},
-			APIGroups:     []string{"config.openshift.io"},
-			Resources:     []string{"ingresses"},
-			ResourceNames: []string{"cluster"},
+			Verbs:     []string{"get"},
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
 		},
 	}
 
-	sa := CreateServiceAccount(test, namespace.Name)
-	role := CreateRole(test, namespace.Name, policyRules)
-	CreateRoleBinding(test, namespace.Name, sa, role)
-	clusterRole := CreateClusterRole(test, clusterPolicyRules)
-	CreateClusterRoleBinding(test, sa, clusterRole)
-	token := CreateToken(test, namespace.Name, sa)
+	adminName := GetNotebookAdminName(test)
+	adminToken := GetNotebookAdminToken(test)
+	userName := GetNotebookUserName(test)
+	userToken := GetNotebookUserToken(test)
+
+	// Create needed roles for Notebook users
+	adminRole := CreateRole(test, namespace.Name, adminPolicyRules)
+	CreateUserRoleBinding(test, namespace.Name, adminName, adminRole)
+	userRole := CreateRole(test, namespace.Name, userPolicyRules)
+	CreateUserRoleBinding(test, namespace.Name, userName, userRole)
+
+	// Create Kueue resources
+	resourceFlavor := CreateKueueResourceFlavor(test, v1beta1.ResourceFlavorSpec{})
+	defer test.Client().Kueue().KueueV1beta1().ResourceFlavors().Delete(test.Ctx(), resourceFlavor.Name, metav1.DeleteOptions{})
+	cqSpec := v1beta1.ClusterQueueSpec{
+		NamespaceSelector: &metav1.LabelSelector{},
+		ResourceGroups: []v1beta1.ResourceGroup{
+			{
+				CoveredResources: []corev1.ResourceName{corev1.ResourceName("cpu"), corev1.ResourceName("memory"), corev1.ResourceName("nvidia.com/gpu")},
+				Flavors: []v1beta1.FlavorQuotas{
+					{
+						Name: v1beta1.ResourceFlavorReference(resourceFlavor.Name),
+						Resources: []v1beta1.ResourceQuota{
+							{
+								Name:         corev1.ResourceCPU,
+								NominalQuota: resource.MustParse("8"),
+							},
+							{
+								Name:         corev1.ResourceMemory,
+								NominalQuota: resource.MustParse("12Gi"),
+							},
+							{
+								Name:         corev1.ResourceName("nvidia.com/gpu"),
+								NominalQuota: resource.MustParse("0"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	clusterQueue := CreateKueueClusterQueue(test, cqSpec)
+	defer test.Client().Kueue().KueueV1beta1().ClusterQueues().Delete(test.Ctx(), clusterQueue.Name, metav1.DeleteOptions{})
+	localQueue := CreateKueueLocalQueue(test, namespace.Name, clusterQueue.Name)
 
 	// Create Notebook CR
-	createNotebook(test, namespace, token, config.Name, jupyterNotebookConfigMapFileName)
+	createNotebook(test, namespace, adminToken, userToken, localQueue.Name, config.Name, jupyterNotebookConfigMapFileName)
+
+	// Gracefully cleanup Notebook
+	defer func() {
+		deleteNotebook(test, namespace)
+		test.Eventually(listNotebooks(test, namespace), TestTimeoutMedium).Should(HaveLen(0))
+	}()
 
 	// Make sure the RayCluster is created and running
 	test.Eventually(rayClusters(test, namespace), TestTimeoutLong).
 		Should(
 			And(
 				HaveLen(1),
-				ContainElement(WithTransform(AppWrapperState, Equal(rayv1.Ready))),
+				ContainElement(WithTransform(RayClusterState, Equal(rayv1.Ready))),
+			),
+		)
+
+	// Make sure the Workload is created and running
+	test.Eventually(GetKueueWorkloads(test, namespace.Name), TestTimeoutMedium).
+		Should(
+			And(
+				HaveLen(1),
+				ContainElement(WithTransform(KueueWorkloadAdmitted, BeTrueBecause("Workload failed to be admitted"))),
 			),
 		)
 

@@ -27,10 +27,22 @@ const (
 	odhNamespaceEnvVar = "ODH_NAMESPACE"
 	// The environment variable for ODH Notebook ImageStream name
 	notebookImageStreamName = "NOTEBOOK_IMAGE_STREAM_NAME"
+	// Name of the authenticated Notebook admin
+	notebookAdminName = "NOTEBOOK_ADMIN_NAME"
+	// Token of the authenticated Notebook admin
+	notebookAdminToken = "NOTEBOOK_ADMIN_TOKEN"
+	// Name of the authenticated Notebook user
+	notebookUserName = "NOTEBOOK_USER_NAME"
+	// Token of the authenticated Notebook user
+	notebookUserToken = "NOTEBOOK_USER_TOKEN"
 )
 
-func GetOpenDataHubNamespace() string {
-	return lookupEnvOrDefault(odhNamespaceEnvVar, "opendatahub")
+func GetOpenDataHubNamespace(t Test) string {
+	ns, ok := os.LookupEnv(odhNamespaceEnvVar)
+	if !ok {
+		t.T().Fatalf("Expected environment variable %s not found, please use this environment variable to specify namespace where ODH is installed to.", odhNamespaceEnvVar)
+	}
+	return ns
 }
 
 func GetNotebookImageStreamName(t Test) string {
@@ -41,9 +53,34 @@ func GetNotebookImageStreamName(t Test) string {
 	return isName
 }
 
-func lookupEnvOrDefault(key, value string) string {
-	if v, ok := os.LookupEnv(key); ok {
-		return v
+func GetNotebookAdminName(t Test) string {
+	name, ok := os.LookupEnv(notebookAdminName)
+	if !ok {
+		t.T().Fatalf("Expected environment variable %s not found, please use this environment variable to specify token of the authenticated Notebook admin.", notebookAdminName)
 	}
-	return value
+	return name
+}
+
+func GetNotebookAdminToken(t Test) string {
+	token, ok := os.LookupEnv(notebookAdminToken)
+	if !ok {
+		t.T().Fatalf("Expected environment variable %s not found, please use this environment variable to specify token of the authenticated Notebook admin.", notebookAdminToken)
+	}
+	return token
+}
+
+func GetNotebookUserName(t Test) string {
+	name, ok := os.LookupEnv(notebookUserName)
+	if !ok {
+		t.T().Fatalf("Expected environment variable %s not found, please use this environment variable to specify token of the authenticated Notebook user.", notebookUserName)
+	}
+	return name
+}
+
+func GetNotebookUserToken(t Test) string {
+	token, ok := os.LookupEnv(notebookUserToken)
+	if !ok {
+		t.T().Fatalf("Expected environment variable %s not found, please use this environment variable to specify token of the authenticated Notebook user.", notebookUserToken)
+	}
+	return token
 }

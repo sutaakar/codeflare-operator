@@ -36,40 +36,44 @@ const recommendedTagAnnotation = "opendatahub.io/workbench-image-recommended"
 var notebookResource = schema.GroupVersionResource{Group: "kubeflow.org", Version: "v1", Resource: "notebooks"}
 
 type NotebookProps struct {
-	IngressDomain             string
-	OpenShiftApiUrl           string
-	KubernetesBearerToken     string
-	Namespace                 string
-	OpenDataHubNamespace      string
-	ImageStreamName           string
-	ImageStreamTag            string
-	RayImage                  string
-	NotebookConfigMapName     string
-	NotebookConfigMapFileName string
-	NotebookPVC               string
+	IngressDomain              string
+	OpenShiftApiUrl            string
+	KubernetesAdminBearerToken string
+	KubernetesUserBearerToken  string
+	Namespace                  string
+	OpenDataHubNamespace       string
+	ImageStreamName            string
+	ImageStreamTag             string
+	RayImage                   string
+	LocalQueue                 string
+	NotebookConfigMapName      string
+	NotebookConfigMapFileName  string
+	NotebookPVC                string
 }
 
-func createNotebook(test Test, namespace *corev1.Namespace, notebookToken, jupyterNotebookConfigMapName, jupyterNotebookConfigMapFileName string) {
+func createNotebook(test Test, namespace *corev1.Namespace, notebookAdminToken, notebookUserToken, localQueue, jupyterNotebookConfigMapName, jupyterNotebookConfigMapFileName string) {
 	// Create PVC for Notebook
 	notebookPVC := CreatePersistentVolumeClaim(test, namespace.Name, "10Gi", corev1.ReadWriteOnce)
 
 	// Retrieve ImageStream tag for
-	is := GetImageStream(test, GetOpenDataHubNamespace(), GetNotebookImageStreamName(test))
+	is := GetImageStream(test, GetOpenDataHubNamespace(test), GetNotebookImageStreamName(test))
 	recommendedTagName := getRecommendedImageStreamTag(test, is)
 
 	// Read the Notebook CR from resources and perform replacements for custom values using go template
 	notebookProps := NotebookProps{
-		IngressDomain:             GetOpenShiftIngressDomain(test),
-		OpenShiftApiUrl:           GetOpenShiftApiUrl(test),
-		KubernetesBearerToken:     notebookToken,
-		Namespace:                 namespace.Name,
-		OpenDataHubNamespace:      GetOpenDataHubNamespace(),
-		ImageStreamName:           GetNotebookImageStreamName(test),
-		ImageStreamTag:            recommendedTagName,
-		RayImage:                  GetRayImage(),
-		NotebookConfigMapName:     jupyterNotebookConfigMapName,
-		NotebookConfigMapFileName: jupyterNotebookConfigMapFileName,
-		NotebookPVC:               notebookPVC.Name,
+		IngressDomain:              GetOpenShiftIngressDomain(test),
+		OpenShiftApiUrl:            GetOpenShiftApiUrl(test),
+		KubernetesAdminBearerToken: notebookAdminToken,
+		KubernetesUserBearerToken:  notebookUserToken,
+		Namespace:                  namespace.Name,
+		OpenDataHubNamespace:       GetOpenDataHubNamespace(test),
+		ImageStreamName:            GetNotebookImageStreamName(test),
+		ImageStreamTag:             recommendedTagName,
+		RayImage:                   GetRayImage(),
+		LocalQueue:                 localQueue,
+		NotebookConfigMapName:      jupyterNotebookConfigMapName,
+		NotebookConfigMapFileName:  jupyterNotebookConfigMapFileName,
+		NotebookPVC:                notebookPVC.Name,
 	}
 	notebookTemplate, err := files.ReadFile("resources/custom-nb-small.yaml")
 	test.Expect(err).NotTo(gomega.HaveOccurred())
@@ -82,6 +86,23 @@ func createNotebook(test Test, namespace *corev1.Namespace, notebookToken, jupyt
 	test.Expect(err).NotTo(gomega.HaveOccurred())
 	_, err = test.Client().Dynamic().Resource(notebookResource).Namespace(namespace.Name).Create(test.Ctx(), notebookCR, metav1.CreateOptions{})
 	test.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
+func deleteNotebook(test Test, namespace *corev1.Namespace) {
+	err := test.Client().Dynamic().Resource(notebookResource).Namespace(namespace.Name).Delete(test.Ctx(), "jupyter-nb-kube-3aadmin", metav1.DeleteOptions{})
+	test.Expect(err).NotTo(gomega.HaveOccurred())
+}
+
+func listNotebooks(test Test, namespace *corev1.Namespace) []*unstructured.Unstructured {
+	ntbs, err := test.Client().Dynamic().Resource(notebookResource).Namespace(namespace.Name).List(test.Ctx(), metav1.ListOptions{})
+	test.Expect(err).NotTo(gomega.HaveOccurred())
+
+	ntbsp := []*unstructured.Unstructured{}
+	for _, v := range ntbs.Items {
+		ntbsp = append(ntbsp, &v)
+	}
+
+	return ntbsp
 }
 
 func getRecommendedImageStreamTag(test Test, is *imagev1.ImageStream) (tagName string) {
