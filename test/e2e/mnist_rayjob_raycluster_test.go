@@ -17,6 +17,7 @@ limitations under the License.
 package e2e
 
 import (
+	"net/url"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -221,7 +222,11 @@ func TestMNISTRayJobRayCluster(t *testing.T) {
 	test.Expect(err).NotTo(HaveOccurred())
 	test.T().Logf("Created RayJob %s/%s successfully", rayJob.Namespace, rayJob.Name)
 
-	rayDashboardURL := ExposeService(test, "ray-dashboard", namespace.Name, "raycluster-head-svc", "dashboard")
+	dashboardIngress := GetIngress(test, namespace.Name, "ray-dashboard-"+rayCluster.Name)
+	rayDashboardURL := url.URL{
+		Scheme: "http",
+		Host:   dashboardIngress.Spec.Rules[0].Host,
+	}
 
 	test.T().Logf("Connecting to Ray cluster at: %s", rayDashboardURL.String())
 	rayClient := NewRayClusterClient(rayDashboardURL)
