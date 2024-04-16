@@ -17,10 +17,13 @@ limitations under the License.
 package e2e
 
 import (
+	"net/http"
 	"net/url"
 	"testing"
 
+	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
+	"github.com/project-codeflare/codeflare-common/support"
 	. "github.com/project-codeflare/codeflare-common/support"
 	rayv1 "github.com/ray-project/kuberay/ray-operator/apis/ray/v1"
 
@@ -180,69 +183,77 @@ func TestMNISTRayJobRayCluster(t *testing.T) {
 	test.Eventually(RayCluster(test, namespace.Name, rayCluster.Name), TestTimeoutMedium).
 		Should(WithTransform(RayClusterState, Equal(rayv1.Ready)))
 
-	rayJob := &rayv1.RayJob{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: rayv1.GroupVersion.String(),
-			Kind:       "RayJob",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mnist",
-			Namespace: namespace.Name,
-		},
-		Spec: rayv1.RayJobSpec{
-			Entrypoint: "python /home/ray/jobs/mnist.py",
-			RuntimeEnvYAML: `
-  pip:
-    - pytorch_lightning==1.5.10
-    - torchmetrics==0.9.1
-    - torchvision==0.12.0
-  env_vars:
-    MNIST_DATASET_URL: "` + GetMnistDatasetURL() + `"
-    PIP_INDEX_URL: "` + GetPipIndexURL() + `"
-    PIP_TRUSTED_HOST: "` + GetPipTrustedHost() + `"
-`,
-			ClusterSelector: map[string]string{
-				RayJobDefaultClusterSelectorKey: rayCluster.Name,
-			},
-			ShutdownAfterJobFinishes: false,
-			SubmitterPodTemplate: &corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Containers: []corev1.Container{
-						{
-							Image: GetRayImage(),
-							Name:  "rayjob-submitter-pod",
-						},
-					},
-				},
-			},
-		},
-	}
-	rayJob, err = test.Client().Ray().RayV1().RayJobs(namespace.Name).Create(test.Ctx(), rayJob, metav1.CreateOptions{})
-	test.Expect(err).NotTo(HaveOccurred())
-	test.T().Logf("Created RayJob %s/%s successfully", rayJob.Namespace, rayJob.Name)
-
-	dashboardIngress := GetIngress(test, namespace.Name, "ray-dashboard-"+rayCluster.Name)
-	rayDashboardURL := url.URL{
-		Scheme: "http",
-		Host:   dashboardIngress.Spec.Rules[0].Host,
-	}
-
+	rayDashboardURL := getRayDashboardURL(test, rayCluster.Namespace, rayCluster.Name)
 	test.T().Logf("Connecting to Ray cluster at: %s", rayDashboardURL.String())
-	rayClient := NewRayClusterClient(rayDashboardURL)
 
-	// Wait for Ray job id to be available, this value is needed for writing logs in defer
-	test.Eventually(RayJob(test, rayJob.Namespace, rayJob.Name), TestTimeoutShort).
-		Should(WithTransform(RayJobId, Not(BeEmpty())))
+	rayClient := NewRayClusterClient(rayDashboardURL)
+	job := &support.RayJobSetup{
+		EntryPoint: "python /home/ray/jobs/mnist.py",
+		RuntimeEnv: map[string]any{
+			"pip": []string{
+				"pytorch_lightning==1.5.10",
+				"torchmetrics==0.9.1",
+				"torchvision==0.12.0",
+			},
+			"env_vars": []string{
+				"MNIST_DATASET_URL: `" + GetMnistDatasetURL() + "`",
+				"PIP_INDEX_URL: `" + GetPipIndexURL() + "`",
+				"PIP_TRUSTED_HOST: `" + GetPipTrustedHost() + "`",
+			},
+		},
+	}
+	jobResponse, err := rayClient.CreateJob(job)
+	test.Expect(err).NotTo(HaveOccurred())
+	test.T().Logf("Ray Job %s submitted successfully", jobResponse.JobID)
 
 	// Retrieving the job logs once it has completed or timed out
-	defer WriteRayJobAPILogs(test, rayClient, GetRayJobId(test, rayJob.Namespace, rayJob.Name))
+	defer WriteRayJobAPILogs(test, rayClient, jobResponse.JobID)
 
-	test.T().Logf("Waiting for RayJob %s/%s to complete", rayJob.Namespace, rayJob.Name)
-	test.Eventually(RayJob(test, rayJob.Namespace, rayJob.Name), TestTimeoutLong).
-		Should(WithTransform(RayJobStatus, Satisfy(rayv1.IsJobTerminal)))
+	test.T().Logf("Waiting for Job %s to finish", jobResponse.JobID)
+	test.Eventually(support.RayJobAPIDetails(test, rayClient, jobResponse.JobID), support.TestTimeoutLong).
+		Should(
+			Or(
+				WithTransform(support.GetRayJobAPIDetailsStatus, Equal("SUCCEEDED")),
+				WithTransform(support.GetRayJobAPIDetailsStatus, Equal("STOPPED")),
+				WithTransform(support.GetRayJobAPIDetailsStatus, Equal("FAILED")),
+			))
 
-	// Assert the Ray job has completed successfully
-	test.Expect(GetRayJob(test, rayJob.Namespace, rayJob.Name)).
-		To(WithTransform(RayJobStatus, Equal(rayv1.JobStatusSucceeded)))
+	// Assert the job has completed successfully
+	test.Expect(support.GetRayJobAPIDetails(test, rayClient, jobResponse.JobID)).
+		To(WithTransform(support.GetRayJobAPIDetailsStatus, Equal("SUCCEEDED")))
+}
+
+func getRayDashboardURL(test Test, namespace, rayClusterName string) url.URL {
+	dashboardName := "ray-dashboard-" + rayClusterName
+
+	if IsOpenShift(test) {
+		route := GetRoute(test, namespace, dashboardName)
+		hostname := route.Status.Ingress[0].Host
+
+		// Wait for expected HTTP code
+		test.T().Logf("Waiting for Route %s/%s to be available", route.Namespace, route.Name)
+		test.Eventually(func() (int, error) {
+			resp, err := http.Get("http://" + hostname)
+			if err != nil {
+				return -1, err
+			}
+			return resp.StatusCode, nil
+		}, TestTimeoutShort).Should(gomega.Not(gomega.Equal(503)))
+
+		return url.URL{
+			Scheme: "https",
+			Host:   hostname,
+		}
+	}
+
+	ingress := GetIngress(test, namespace, dashboardName)
+
+	test.T().Logf("Waiting for Ingress %s/%s to be admitted", ingress.Namespace, ingress.Name)
+	test.Eventually(Ingress(test, ingress.Namespace, ingress.Name), TestTimeoutShort).
+		Should(gomega.WithTransform(LoadBalancerIngresses, gomega.HaveLen(1)))
+
+	return url.URL{
+		Scheme: "http",
+		Host:   ingress.Spec.Rules[0].Host,
+	}
 }

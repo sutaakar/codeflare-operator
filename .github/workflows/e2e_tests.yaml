@@ -38,8 +38,8 @@ jobs:
       - name: Checkout common repo code
         uses: actions/checkout@v4
         with:
-          repository: 'sutaakar/codeflare-common'
-          ref: 'dnsmasq'
+          repository: 'project-codeflare/codeflare-common'
+          ref: 'main'
           path: 'common'
 
       - name: Set Go
