@@ -12,7 +12,7 @@ configurations:
   - params.yaml
 
 vars:
-- name: namespace
+- name: namespacex
   objref:
     kind: ConfigMap
     name: stack-config
