@@ -37,6 +37,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -263,7 +264,7 @@ func (r *RayClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var kubeRayNamespaces []string
 	dsci := &dsciv1.DSCInitialization{}
 	err := r.Client.Get(ctx, client.ObjectKey{Name: "default-dsci"}, dsci)
-	if errors.IsNotFound(err) {
+	if meta.IsNoMatchError(err) || errors.IsNotFound(err) {
 		kubeRayNamespaces = []string{"opendatahub", "redhat-ods-applications"}
 	} else if err != nil {
 		return ctrl.Result{}, err
